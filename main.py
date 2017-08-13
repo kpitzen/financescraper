@@ -3,6 +3,9 @@
    and receive output as JSON.'''
 
 import argparse
+from multiprocessing import Queue, Process
+
+from financescraper import extractors, loaders, testing, transformers
 
 ARG_PARSER = argparse.ArgumentParser()
 SUB_PARSERS = ARG_PARSER.add_subparsers(dest='subparser_name')
@@ -16,9 +19,14 @@ ARGS = ARG_PARSER.parse_args()
 GOOGLE_FINANCE_URL = 'http://www.google.com/finance'
 
 if __name__ == '__main__':
+
+    TEST_OUTPUT_QUEUE = Queue()
+
+
+
     if ARGS.subparser_name == 'feed':
         TICKER_NAME = ARGS.stock_ticker
         QUERY_TYPE = ARGS.query_type
         QUERY_PAYLOAD = '?q={}&output=json'.format(TICKER_NAME)
         URL_PAYLOAD = '/'.join([GOOGLE_FINANCE_URL, ''.join([QUERY_TYPE, QUERY_PAYLOAD])])
-        print(URL_PAYLOAD)
+
