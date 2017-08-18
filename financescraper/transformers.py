@@ -1,6 +1,7 @@
 '''handles renaming of keys and formatting of data for loads'''
 
 from helpers import helpers
+from decimal import Decimal
 import abc
 import json
 
@@ -58,6 +59,7 @@ class OptionsStockMapper(BaseStockMapper):
             output_item['option_type'] = 'put'
             output_item['stock_ticker'] = ticker
             output_item['contract_id'] = int(output_item['contract_id'])
+            output_item['strike'] = Decimal(output_item['strike'])
             # results.append(helpers.format_python_dict_for_dynamo(output_item))
             results.append(output_item)
         for item in calls_data:
@@ -69,6 +71,7 @@ class OptionsStockMapper(BaseStockMapper):
             output_item['option_type'] = 'call'
             output_item['stock_ticker'] = ticker
             output_item['contract_id'] = int(output_item['contract_id'])
+            output_item['strike'] = Decimal(output_item['strike'])
             # results.append(helpers.format_python_dict_for_dynamo(output_item))
             results.append(output_item)
         return results
