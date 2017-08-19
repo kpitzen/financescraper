@@ -1,7 +1,7 @@
 '''handles renaming of keys and formatting of data for loads'''
 
 from helpers import helpers
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import abc
 import json
 
@@ -50,19 +50,12 @@ class OptionsStockMapper(BaseStockMapper):
         ticker = message[0]
         puts_data = message[1]['puts']
         calls_data = message[1]['calls']
+        data = puts_data + calls_data
         for item in puts_data:
-            output_item = {}
-            for key, value in item.items():
-                if value:
-                    mapped_key = self._name_mappings.get(key, key)
-                    output_item[mapped_key] = value
-            output_item['option_type'] = 'put'
-            output_item['stock_ticker'] = ticker
-            output_item['contract_id'] = int(output_item['contract_id'])
-            output_item['strike'] = Decimal(output_item['strike'])
-            # results.append(helpers.format_python_dict_for_dynamo(output_item))
-            results.append(output_item)
+            item['option_type'] = 'put'
         for item in calls_data:
+            item['option_type'] = 'call'
+        for item in data:
             output_item = {}
             for key, value in item.items():
                 if value:
@@ -72,6 +65,27 @@ class OptionsStockMapper(BaseStockMapper):
             output_item['stock_ticker'] = ticker
             output_item['contract_id'] = int(output_item['contract_id'])
             output_item['strike'] = Decimal(output_item['strike'])
+            try:
+                output_item['ask'] = Decimal(output_item['ask'])
+            except InvalidOperation:
+                output_item['ask'] = 0
+            try:
+                output_item['price'] = Decimal(output_item['price'])
+            except InvalidOperation:
+                output_item['price'] = 0
+            try:
+                output_item['change'] = Decimal(output_item['change'])
+            except InvalidOperation:
+                output_item['change'] = Decimal(0)
+            try:
+                output_item['volume'] = int(output_item['volume'])
+            except ValueError:
+                output_item['volume'] = int(0)
+            try:
+                output_item['cp'] = Decimal(output_item['cp'])
+            except KeyError:
+                pass
+
             # results.append(helpers.format_python_dict_for_dynamo(output_item))
             results.append(output_item)
         return results
