@@ -22,6 +22,7 @@ class BaseStockDataPump():
         try:
             assert 'application/json' in data_request.headers['Content-Type']
         except AssertionError:
+            print(data_request)
             raise NotImplementedError('We require JSON returns!')
         try:
             request_data = data_request.json()

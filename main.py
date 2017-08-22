@@ -5,6 +5,8 @@
 from os.path import abspath, join
 import argparse
 import configparser
+
+import boto3
 from multiprocessing import Queue, Process
 
 from financescraper import extractors, loaders, testing, transformers
@@ -30,14 +32,12 @@ if __name__ == '__main__':
     LOAD_QUEUE = Queue()
 
     if ARGS.subparser_name == 'feed':
-        TICKER_NAME = ARGS.stock_ticker
-        QUERY_TYPE = ARGS.query_type
-        QUERY_PAYLOAD = '?q={}&output=json'.format(TICKER_NAME)
-        URL_PAYLOAD = '/'.join([GOOGLE_FINANCE_URL, ''.join([QUERY_TYPE, QUERY_PAYLOAD])])
 
-        TEST_DATA_GETTER = extractors.BaseStockDataPump(URL_PAYLOAD, TICKER_NAME
-                                                        , output_queue=MAPPING_QUEUE)
-        DATA_FEED_PROCESS = Process(target=TEST_DATA_GETTER.feed_data)
+        SQS = boto3.resource('sqs')
+        TICKER_QUEUE = SQS.get_queue_by_name(QueueName='finance-scraping-queue')
+
+        QUERY_TYPE = ARGS.query_type
+
 
         OPTION_MAPPER = transformers.OptionsStockMapper(MAPPING_QUEUE, LOAD_QUEUE
                                                         , NAME_MAPPING_CONFIG)
@@ -48,8 +48,22 @@ if __name__ == '__main__':
 
         LOAD_PROCESS.start()
         MAPPING_PROCESS.start()
-        DATA_FEED_PROCESS.start()
+        while True:
+            STOCK_TICKER_LIST = TICKER_QUEUE.receive_messages()
+            if STOCK_TICKER_LIST:
+                for message in STOCK_TICKER_LIST:
+                    ticker = message.body
+                    message.delete()
+                    print(ticker)
+                    QUERY_PAYLOAD = '?q={}&output=json'.format(ticker)
+                    URL_PAYLOAD = '/'.join([GOOGLE_FINANCE_URL, ''.join([QUERY_TYPE, QUERY_PAYLOAD])])
+                    print(URL_PAYLOAD)
+                    TEST_DATA_GETTER = extractors.BaseStockDataPump(URL_PAYLOAD, ticker
+                                                                    , output_queue=MAPPING_QUEUE)
 
-        DATA_FEED_PROCESS.join()
+                    DATA_FEED_PROCESS = Process(target=TEST_DATA_GETTER.feed_data)
+                    DATA_FEED_PROCESS.start()
+                    DATA_FEED_PROCESS.join()
+                    print('Finished loading: {}'.format(ticker))
         MAPPING_PROCESS.join()
         LOAD_PROCESS.join()

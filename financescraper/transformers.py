@@ -64,23 +64,33 @@ class OptionsStockMapper(BaseStockMapper):
             output_item['option_type'] = 'call'
             output_item['stock_ticker'] = ticker
             output_item['contract_id'] = int(output_item['contract_id'])
-            output_item['strike'] = Decimal(output_item['strike'])
+            try:
+                output_item['strike'] = Decimal(output_item['strike'].replace(",", ""))
+            except InvalidOperation:
+                print(output_item['strike'])
+                raise
             try:
                 output_item['ask'] = Decimal(output_item['ask'])
             except InvalidOperation:
-                output_item['ask'] = 0
+                del(output_item['ask'])
             try:
                 output_item['price'] = Decimal(output_item['price'])
             except InvalidOperation:
-                output_item['price'] = 0
+                del(output_item['price'])
             try:
                 output_item['change'] = Decimal(output_item['change'])
             except InvalidOperation:
-                output_item['change'] = Decimal(0)
+                del(output_item['change'])
+            try:
+                output_item['bid'] = Decimal(output_item['bid'])
+            except InvalidOperation:
+                del(output_item['bid'])
+            except KeyError:
+                pass
             try:
                 output_item['volume'] = int(output_item['volume'])
             except ValueError:
-                output_item['volume'] = int(0)
+                del(output_item['volume'])
             try:
                 output_item['cp'] = Decimal(output_item['cp'])
             except KeyError:

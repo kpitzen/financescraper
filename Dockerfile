@@ -6,4 +6,6 @@ ADD . /financescraper
 
 RUN pip install -r requirements.txt
 
-CMD ["python", "main.py", "feed", "-s", "TSLA"]
+RUN docker run --env-file ./env.list ubuntu env
+
+CMD ["python", "main.py", "feed"]
