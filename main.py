@@ -33,6 +33,8 @@ if __name__ == '__main__':
 
     if ARGS.subparser_name == 'feed':
 
+        EXCEPTION_LOG = abspath('logs/exceptions.log')
+
         SQS = boto3.resource('sqs')
         TICKER_QUEUE = SQS.get_queue_by_name(QueueName='finance-scraping-queue')
 
@@ -49,21 +51,26 @@ if __name__ == '__main__':
         LOAD_PROCESS.start()
         MAPPING_PROCESS.start()
         while True:
-            STOCK_TICKER_LIST = TICKER_QUEUE.receive_messages()
-            if STOCK_TICKER_LIST:
-                for message in STOCK_TICKER_LIST:
-                    ticker = message.body
-                    message.delete()
-                    print(ticker)
-                    QUERY_PAYLOAD = '?q={}&output=json'.format(ticker)
-                    URL_PAYLOAD = '/'.join([GOOGLE_FINANCE_URL, ''.join([QUERY_TYPE, QUERY_PAYLOAD])])
-                    print(URL_PAYLOAD)
-                    TEST_DATA_GETTER = extractors.BaseStockDataPump(URL_PAYLOAD, ticker
-                                                                    , output_queue=MAPPING_QUEUE)
+            with open(EXCEPTION_LOG, 'w') as exception_log:
+                STOCK_TICKER_LIST = TICKER_QUEUE.receive_messages()
+                if STOCK_TICKER_LIST:
+                    for message in STOCK_TICKER_LIST:
+                        try:
+                            ticker = message.body
+                            message.delete()
+                            print(ticker)
+                            QUERY_PAYLOAD = '?q={}&output=json'.format(ticker)
+                            URL_PAYLOAD = '/'.join([GOOGLE_FINANCE_URL, ''.join([QUERY_TYPE, QUERY_PAYLOAD])])
+                            print(URL_PAYLOAD)
+                            TEST_DATA_GETTER = extractors.BaseStockDataPump(URL_PAYLOAD, ticker
+                                                                            , output_queue=MAPPING_QUEUE)
 
-                    DATA_FEED_PROCESS = Process(target=TEST_DATA_GETTER.feed_data)
-                    DATA_FEED_PROCESS.start()
-                    DATA_FEED_PROCESS.join()
-                    print('Finished loading: {}'.format(ticker))
+                            DATA_FEED_PROCESS = Process(target=TEST_DATA_GETTER.feed_data)
+                            DATA_FEED_PROCESS.start()
+                            DATA_FEED_PROCESS.join()
+                            print('Finished loading: {}'.format(ticker))
+                        except Exception as exception:
+                            print(exception, file=exception_log)
+                            continue
         MAPPING_PROCESS.join()
         LOAD_PROCESS.join()
