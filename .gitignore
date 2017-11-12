@@ -9,3 +9,4 @@ env.list
 
 !.elasticbeanstalk/*.global.yml
 
+credentials
