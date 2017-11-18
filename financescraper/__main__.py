@@ -3,13 +3,14 @@
    and receive output as JSON.'''
 
 from os.path import abspath, join
-import argparse
 import configparser
 import atexit
 
 from multiprocessing import Queue, Process
 
-from financescraper import extractors, loaders, testing, transformers
+import extractors
+import loaders
+import transformers
 
 from flask import Flask, request, abort
 
@@ -19,7 +20,6 @@ NAME_MAPPING_CONFIG.read(NAME_MAPPING_CONFIG_FILE)
 
 
 GOOGLE_FINANCE_URL = 'http://www.google.com/finance'
-
 
 APP = Flask(__name__)
 
@@ -60,5 +60,5 @@ def feed_ticker_data():
             print(exception, file=exception_log)
             abort(404)
 
-if __name__ == '__main__':
+def main():
     APP.run(host='0.0.0.0')
